@@ -5,7 +5,7 @@ from os import path
 REQUIREMETS_DEV_FILE = 'requirements_dev.txt'
 REQUIREMETS_TEST_FILE = 'requirements_test.txt'
 REQUIREMETS_FILE = 'requirements.txt'
-PROJECTNAME = 'sanic_mail'
+PROJECTNAME = 'sanic-mail'
 VERSION = '0.0.1'
 DESCRIPTION = 'async email sender for sanic'
 URL = 'https://github.com/Sanic-Extensions/sanic-mail'
@@ -20,8 +20,8 @@ CLASSIFIERS = [
     'Programming Language :: Python :: 3.6',
     'Topic :: Documentation :: Sphinx',
 ]
-KEYWORDS = ("email","sanic",)
-PACKAGES = find_packages(exclude=['contrib', 'docs', 'test'])
+KEYWORDS = ["email","sanic"]
+PACKAGES = ["sanic_mail"]
 ZIP_SAFE = False
 
 HERE = path.abspath(path.dirname(__file__))
@@ -56,7 +56,6 @@ setup(
         'dev': REQUIREMETS_DEV,
         'test': REQUIREMETS_TEST
     },
-    
     zip_safe=ZIP_SAFE,
     data_files=[('requirements', ['requirements/requirements.txt',
         'requirements/requirements_dev.txt',

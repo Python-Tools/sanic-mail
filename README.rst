@@ -13,7 +13,7 @@ sanic_mail
 Desc
 --------------------------------
 
-async email sender for sanic
+async email sender extension for sanic!
 
 
 keywords:email,sanic
@@ -21,7 +21,7 @@ keywords:email,sanic
 
 Feature
 ----------------------
-* Feature1
+* send
 * Feature2
 
 Example

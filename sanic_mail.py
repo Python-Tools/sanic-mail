@@ -1,19 +1,22 @@
 """Sanic-mail."""
 import asyncio
-from functools import partial
+import mimetypes
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
-from email.mime.base import MIMEBase
+from email.mime.nonmultipart import MIMENonMultipart
 from email.mime.multipart import MIMEMultipart
 from email import encoders
 from email.header import Header
 from email.utils import parseaddr, formataddr
 from typing import (
+    Union,
     Optional,
     Dict,
-    List
+    List,
+    Any
 )
 import aiosmtplib
+from sanic.log import logger
 
 
 class Sanic_Mail:
@@ -34,11 +37,12 @@ class Sanic_Mail:
         app.config.MAIL_SEND_PORT = (
             confs.get("MAIL_SEND_PORT") or app.config.MAIL_SEND_PORT
         )
-        #app.config.MAIL_SLL = confs.get("MAIL_SEND_PORT")
+        app.config.MAIL_TLS = confs.get("MAIL_TLS") or app.config.MAIL_TLS or Ture
         return app
 
     def __init__(self, app=None):
         """初始化插件,可以后指定app."""
+        self.smtp = None
         if app:
             self.init_app(app)
         else:
@@ -53,22 +57,39 @@ class Sanic_Mail:
 
         app.send_email_nowait = self.send_email_no_wait
         app.send_email = self.send_email
-        return self
 
-    async def send(self, content):
-        """将邮件发送出去."""
-        pass
+        @app.listener("before_server_start")
+        async def stmp_connection(app, loop):
+            self.smtp = aiosmtplib.SMTP(
+                loop=loop,
+                hostname=app.config.MAIL_SEND_HOST,
+                port=app.config.MAIL_SEND_PORT,
+                use_tls=app.config.MAIL_TLS
+            )
+            await self.smtp.connect()
+            await self.smtp.login(
+                app.config.MAIL_SENDER, app.config.MAIL_SENDER_PASSWORD
+            )
+            logger.info("[SanicMail] smtp connected !")
+
+        @app.listener("before_server_stop")
+        async def stmp_close(app, loop):
+            self.smtp.close()
+            self.smtp = None
+            logger.info("[SanicMail] smtp connection closed !")
+            return True
+
+        return self
 
     async def send_email(self,
                          targetlist: Union[List[str], str],
                          subject: str,
                          content: str,
-                         sendername: Optinal[str]=None,
-                         Cclist: Optional[List[str], str]=None,
+                         sendername: Optional[str]=None,
+                         Cclist: Union[List[str], str, None]=None,
                          html: bool=False,
                          msgimgs: Optional[Dict[str, str]]=None,
-                         pics: Optional[Dict[str, str]]=None,
-                         files: Optional[Dict[str, str]]=None):
+                         attachments: Optional[Dict[str, str]]=None)->Any:
         """执行发送email的动作.
 
         Parameters:
@@ -79,16 +100,13 @@ class Sanic_Mail:
             sendername (Optinal[str]): - 发送者的发送名,默认为None
             html (bool): - 又见文本是否是html形式的富文本,默认为False
             msgimgs (Optional[Dict[str, str]]): - html格式的文本中插入的图片
-            pics (Optional[Dict[str, str]]): - 附件中的图片,默认为None
-            files (Optional[Dict[str, str]]): - 附件中的文件,默认为None
+            attachments (Optional[Dict[str, str]]): - 附件中的文件,默认为None
 
         """
         if sendername:
             sender = sendername + "<" + self.app.config.MAIL_SENDER + ">"
         else:
             sender = self.app.config.MAIL_SENDER
-        targetlist = list(targetlist)
-
         if isinstance(targetlist, (list, tuple)):
             targetlist = tuple(targetlist)
             targets = ", ".join(targetlist)
@@ -105,7 +123,8 @@ class Sanic_Mail:
                 Cc = Cclist
             else:
                 raise AttributeError("unsupport type for Cclist")
-
+        else:
+            Cc = None
         message = make_message(sender=sender,
                                targets=targets,
                                subject=subject,
@@ -113,20 +132,18 @@ class Sanic_Mail:
                                html=html,
                                Cc=Cc,
                                msgimgs=msgimgs,
-                               pics=pics,
-                               files=files)
-        await self.send(message)
+                               attachments=attachments)
+        return await self.smtp.send_message(message)
 
     def send_email_no_wait(self,
                            targetlist: Union[List[str], str],
                            subject: str,
                            content: str,
                            sendername: str=None,
-                           Cclist: Optional[List[str], str]=None,
+                           Cclist: Union[List[str], str, None]=None,
                            html: bool=False,
                            msgimgs: Optional[Dict[str, str]]=None,
-                           pics: Optional[Dict[str, str]]=None,
-                           files: Optional[Dict[str, str]]=None):
+                           attachments: Optional[Dict[str, str]]=None)->asyncio.Task:
         """执行发送email的动作但不等待而是继续执行下一步的操作.
 
         Parameters:
@@ -137,11 +154,10 @@ class Sanic_Mail:
             sendername (Optinal[str]): - 发送者的发送名,默认为None
             html (bool): - 又见文本是否是html形式的富文本,默认为False
             msgimgs (Optional[Dict[str, str]]): - html格式的文本中插入的图片
-            pics (Optional[Dict[str, str]]): - 附件中的图片,默认为None
-            files (Optional[Dict[str, str]]): - 附件中的文件,默认为None
+            attachments (Optional[Dict[str, str]]): - 附件中的文件,默认为None
 
         """
-        task = ensure_future(
+        task = asyncio.ensure_future(
             self.send_email(
                 targetlist=targetlist,
                 subject=subject,
@@ -150,15 +166,13 @@ class Sanic_Mail:
                 Cclist=Cclist,
                 html=html,
                 msgimgs=msgimgs,
-                pics=pics,
-                files=files
+                attachments=attachments
             )
         )
         return task
 
 
-
-def format_addr(s):
+def format_addr(s: str)->str:
     """将地址信息格式化为`名字<地址>`的形式."""
     name, addr = parseaddr(s)
     return formataddr((Header(name, 'utf-8').encode(), addr))
@@ -172,8 +186,7 @@ def make_message(
         html: bool=False,
         Cc: str=None,
         msgimgs: Optional[Dict[str, str]]=None,
-        pics: Optional[Dict[str, str]]=None,
-        files: Optional[Dict[str, str]]=None)-> MIMEMultipart:
+        attachments: Optional[Dict[str, str]]=None)-> MIMEMultipart:
     """创建信息.
 
     创建信息通过html标志指定内容是html的富文本还是普通文本.默认为普通文本.
@@ -194,8 +207,7 @@ def make_message(
         content (str): - 邮件的文本内容
         html (bool): - 又见文本是否是html形式的富文本,默认为False
         msgimgs (Optional[Dict[str, str]]): - html格式的文本中插入的图片
-        pics (Optional[Dict[str, str]]): - 附件中的图片,默认为None,
-        files (Optional[Dict[str, str]]): - 附件中的文件,默认为None
+        attachments (Optional[Dict[str, str]]): - 附件中的文件,默认为None
 
     Returns:
         (MIMEMultipart): - 没有设置发送者和收件者的邮件内容对象
@@ -223,17 +235,34 @@ def make_message(
         msg.attach(text)
     ctype = 'application/octet-stream'
     maintype, subtype = ctype.split('/', 1)
-    for name, pic in pics.items():
-        image = MIMEImage(pic, _subtype=subtype)
-        image.add_header('Content-Disposition', 'attachment', filename=name)
-        msg.attach(image)
-    for name, file in files.items():
-        file = MIMEBase(maintype, subtype)
-        file.set_payload(file)
-        file.add_header('Content-Disposition', 'attachment', filename=name)
-        encoders.encode_base64(file)
-        msg.attach(file)
+
+
+    # if pics:
+    #     for name, pic in pics.items():
+    #         image = MIMEImage(pic, _subtype=subtype)
+    #         image.add_header('Content-Disposition', 'attachment', filename=name)
+    #         msg.attach(image)
+    if attachments:
+        for name, file in attachments.items():
+            attachment = MIMEAttachment(name,file)
+            attachment.add_header('Content-Disposition', 'attachment', filename=name)
+            msg.attach(attachment)
     return msg
 
+class MIMEAttachment(MIMENonMultipart):
+    def __init__(self,attachename,_attachementdata,
+                 _encoder=encoders.encode_base64, *, policy=None, **_params):
+        """
+        """
+        ctype, encoding = mimetypes.guess_type(attachename)
+        if ctype is None or encoding is not None:
+            ctype = 'application/octet-stream'
+        _maintype, _subtype = ctype.split('/', 1)
+        # if _subtype is None:
+        #     raise TypeError('Could not guess image MIME subtype')
+        MIMENonMultipart.__init__(self, _maintype, _subtype, policy=policy,
+                                  **_params)
+        self.set_payload(_attachementdata)
+        _encoder(self)
 
 __all__ = ["Sanic_Mail"]

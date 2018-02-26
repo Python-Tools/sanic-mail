@@ -22,7 +22,7 @@ from sanic.log import logger
 
 class Sanic_Mail:
     """sanic的邮件发送插件.
-    
+
     使用后发送邮件会被绑定在`app对象`上,支持协程`send_email`,
     也支持方法`send_email_nowait`,其中`send_email_nowait`意为将任务交给协程发送而不等待发送完毕,
     会返回发送的task.
@@ -47,7 +47,7 @@ class Sanic_Mail:
         app.config.MAIL_TLS = confs.get("MAIL_TLS") or app.config.MAIL_TLS or Ture
         return app
 
-    def __init__(self, app=None):
+    def __init__(self, app=None)->None:
         """初始化插件,可以后指定app."""
         self.smtp = None
         if app:
@@ -55,7 +55,7 @@ class Sanic_Mail:
         else:
             pass
 
-    def init_app(self, app):
+    def init_app(self, app)->"Sanic_Mail":
         """为app初始化插件."""
         self.app = app
         if "extensions" not in app.__dir__():
@@ -162,6 +162,9 @@ class Sanic_Mail:
             html (bool): - 又见文本是否是html形式的富文本,默认为False
             msgimgs (Optional[Dict[str, str]]): - html格式的文本中插入的图片
             attachments (Optional[Dict[str, str]]): - 附件中的文件,默认为None
+
+        Return:
+            (asyncio.Task): - 执行发送邮件的任务实例
 
         """
         task = asyncio.ensure_future(

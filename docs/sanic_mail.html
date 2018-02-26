@@ -36,7 +36,7 @@
 <p>Sanic-mail.</p>
 <dl class="class">
 <dt id="sanic_mail.Sanic_Mail">
-<em class="property">class </em><code class="descclassname">sanic_mail.</code><code class="descname">Sanic_Mail</code><span class="sig-paren">(</span><em>app=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sanic_mail.html#Sanic_Mail"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sanic_mail.Sanic_Mail" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">sanic_mail.</code><code class="descname">Sanic_Mail</code><span class="sig-paren">(</span><em>app=None</em><span class="sig-paren">)</span> &#x2192; None<a class="reference internal" href="_modules/sanic_mail.html#Sanic_Mail"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sanic_mail.Sanic_Mail" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>sanic的邮件发送插件.</p>
 <p>使用后发送邮件会被绑定在`app对象`上,支持协程`send_email`,
@@ -50,7 +50,7 @@
 
 <dl class="method">
 <dt id="sanic_mail.Sanic_Mail.init_app">
-<code class="descname">init_app</code><span class="sig-paren">(</span><em>app</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/sanic_mail.html#Sanic_Mail.init_app"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sanic_mail.Sanic_Mail.init_app" title="Permalink to this definition">¶</a></dt>
+<code class="descname">init_app</code><span class="sig-paren">(</span><em>app</em><span class="sig-paren">)</span> &#x2192; sanic_mail.Sanic_Mail<a class="reference internal" href="_modules/sanic_mail.html#Sanic_Mail.init_app"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sanic_mail.Sanic_Mail.init_app" title="Permalink to this definition">¶</a></dt>
 <dd><p>为app初始化插件.</p>
 </dd></dl>
 
@@ -110,7 +110,7 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>targetlist</strong> (<em>Union</em><em>[</em><em>List</em><em>[</em><em>str</em><em>]</em><em>, </em><em>str</em><em>]</em>) – <ul>
 <li>接受者的信息列表,也可以是单独的一条信息</li>
 </ul>
@@ -144,6 +144,15 @@
 </ul>
 </li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><ul class="simple">
+<li>执行发送邮件的任务实例</li>
+</ul>
+</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">(asyncio.Task)</p>
 </td>
 </tr>
 </tbody>

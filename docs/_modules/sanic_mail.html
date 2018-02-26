@@ -1,0 +1,350 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>sanic_mail &#8212; sanic-mail  documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for sanic_mail</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Sanic-mail.&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">asyncio</span>
+<span class="kn">import</span> <span class="nn">mimetypes</span>
+<span class="kn">from</span> <span class="nn">email.mime.text</span> <span class="k">import</span> <span class="n">MIMEText</span>
+<span class="kn">from</span> <span class="nn">email.mime.image</span> <span class="k">import</span> <span class="n">MIMEImage</span>
+<span class="kn">from</span> <span class="nn">email.mime.nonmultipart</span> <span class="k">import</span> <span class="n">MIMENonMultipart</span>
+<span class="kn">from</span> <span class="nn">email.mime.multipart</span> <span class="k">import</span> <span class="n">MIMEMultipart</span>
+<span class="kn">from</span> <span class="nn">email</span> <span class="k">import</span> <span class="n">encoders</span>
+<span class="kn">from</span> <span class="nn">email.header</span> <span class="k">import</span> <span class="n">Header</span>
+<span class="kn">from</span> <span class="nn">email.utils</span> <span class="k">import</span> <span class="n">parseaddr</span><span class="p">,</span> <span class="n">formataddr</span>
+<span class="kn">from</span> <span class="nn">email.utils</span> <span class="k">import</span> <span class="n">make_msgid</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="p">(</span>
+    <span class="n">Union</span><span class="p">,</span>
+    <span class="n">Optional</span><span class="p">,</span>
+    <span class="n">Dict</span><span class="p">,</span>
+    <span class="n">List</span><span class="p">,</span>
+    <span class="n">Any</span>
+<span class="p">)</span>
+<span class="kn">import</span> <span class="nn">aiosmtplib</span>
+<span class="kn">from</span> <span class="nn">sanic.log</span> <span class="k">import</span> <span class="n">logger</span>
+
+
+<div class="viewcode-block" id="Sanic_Mail"><a class="viewcode-back" href="../sanic_mail.html#sanic_mail.Sanic_Mail">[docs]</a><span class="k">class</span> <span class="nc">Sanic_Mail</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;sanic的邮件发送插件.</span>
+<span class="sd">    </span>
+<span class="sd">    使用后发送邮件会被绑定在`app对象`上,支持协程`send_email`,</span>
+<span class="sd">    也支持方法`send_email_nowait`,其中`send_email_nowait`意为将任务交给协程发送而不等待发送完毕,</span>
+<span class="sd">    会返回发送的task.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Sanic_Mail.SetConfig"><a class="viewcode-back" href="../sanic_mail.html#sanic_mail.Sanic_Mail.SetConfig">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">SetConfig</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="o">**</span><span class="n">confs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;将设置绑定到app对象.&quot;&quot;&quot;</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">MAIL_SENDER</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">confs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;MAIL_SENDER&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">MAIL_SENDER</span>
+        <span class="p">)</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">MAIL_SENDER_PASSWORD</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">confs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;MAIL_SENDER_PASSWORD&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">MAIL_SENDER_PASSWORD</span>
+        <span class="p">)</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">MAIL_SEND_HOST</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">confs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;MAIL_SEND_HOST&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">MAIL_SEND_HOST</span>
+        <span class="p">)</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">MAIL_SEND_PORT</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">confs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;MAIL_SEND_PORT&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">MAIL_SEND_PORT</span>
+        <span class="p">)</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">MAIL_TLS</span> <span class="o">=</span> <span class="n">confs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;MAIL_TLS&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">MAIL_TLS</span> <span class="ow">or</span> <span class="n">Ture</span></div>
+        <span class="k">return</span> <span class="n">app</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;初始化插件,可以后指定app.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">smtp</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">app</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">init_app</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+<div class="viewcode-block" id="Sanic_Mail.init_app"><a class="viewcode-back" href="../sanic_mail.html#sanic_mail.Sanic_Mail.init_app">[docs]</a>    <span class="k">def</span> <span class="nf">init_app</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;为app初始化插件.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">app</span> <span class="o">=</span> <span class="n">app</span>
+        <span class="k">if</span> <span class="s2">&quot;extensions&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">app</span><span class="o">.</span><span class="fm">__dir__</span><span class="p">():</span>
+            <span class="n">app</span><span class="o">.</span><span class="n">extensions</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">extensions</span><span class="p">[</span><span class="s1">&#39;EmailSender&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
+
+        <span class="n">app</span><span class="o">.</span><span class="n">send_email_nowait</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">send_email_no_wait</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">send_email</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">send_email</span>
+
+        <span class="nd">@app</span><span class="o">.</span><span class="n">listener</span><span class="p">(</span><span class="s2">&quot;before_server_start&quot;</span><span class="p">)</span>
+        <span class="k">async</span> <span class="k">def</span> <span class="nf">stmp_connection</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">loop</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">smtp</span> <span class="o">=</span> <span class="n">aiosmtplib</span><span class="o">.</span><span class="n">SMTP</span><span class="p">(</span>
+                <span class="n">loop</span><span class="o">=</span><span class="n">loop</span><span class="p">,</span>
+                <span class="n">hostname</span><span class="o">=</span><span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">MAIL_SEND_HOST</span><span class="p">,</span>
+                <span class="n">port</span><span class="o">=</span><span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">MAIL_SEND_PORT</span><span class="p">,</span>
+                <span class="n">use_tls</span><span class="o">=</span><span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">MAIL_TLS</span>
+            <span class="p">)</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">smtp</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+            <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">smtp</span><span class="o">.</span><span class="n">login</span><span class="p">(</span>
+                <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">MAIL_SENDER</span><span class="p">,</span> <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">MAIL_SENDER_PASSWORD</span>
+            <span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[SanicMail] smtp connected !&quot;</span><span class="p">)</span>
+
+        <span class="nd">@app</span><span class="o">.</span><span class="n">listener</span><span class="p">(</span><span class="s2">&quot;before_server_stop&quot;</span><span class="p">)</span>
+        <span class="k">async</span> <span class="k">def</span> <span class="nf">stmp_close</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">loop</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">smtp</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">smtp</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;[SanicMail] smtp connection closed !&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">True</span>
+</div>
+        <span class="k">return</span> <span class="bp">self</span>
+
+<div class="viewcode-block" id="Sanic_Mail.send_email"><a class="viewcode-back" href="../sanic_mail.html#sanic_mail.Sanic_Mail.send_email">[docs]</a>    <span class="k">async</span> <span class="k">def</span> <span class="nf">send_email</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                         <span class="n">targetlist</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">],</span>
+                         <span class="n">subject</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                         <span class="n">content</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                         <span class="n">sendername</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                         <span class="n">Cclist</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                         <span class="n">html</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                         <span class="n">msgimgs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                         <span class="n">attachments</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">Any</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;执行发送email的动作.</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">            targetlist (Union[List[str], str]): - 接受者的信息列表,也可以是单独的一条信息</span>
+<span class="sd">            Cclist (Optional[List[str], str]): - 抄送者的信息列表,也可以是单独的一条信息</span>
+<span class="sd">            subject (str): - 邮件主题</span>
+<span class="sd">            content (str): - 邮件的文本内容</span>
+<span class="sd">            sendername (Optinal[str]): - 发送者的发送名,默认为None</span>
+<span class="sd">            html (bool): - 又见文本是否是html形式的富文本,默认为False</span>
+<span class="sd">            msgimgs (Optional[Dict[str, str]]): - html格式的文本中插入的图片</span>
+<span class="sd">            attachments (Optional[Dict[str, str]]): - 附件中的文件,默认为None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">sendername</span><span class="p">:</span>
+            <span class="n">sender</span> <span class="o">=</span> <span class="n">sendername</span> <span class="o">+</span> <span class="s2">&quot;&lt;&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">MAIL_SENDER</span> <span class="o">+</span> <span class="s2">&quot;&gt;&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sender</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">MAIL_SENDER</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">targetlist</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+            <span class="n">targetlist</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">targetlist</span><span class="p">)</span>
+            <span class="n">targets</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">targetlist</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">targetlist</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">targets</span> <span class="o">=</span> <span class="n">targetlist</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">&quot;unsupport type for targetlist&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">Cclist</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">Cclist</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+                <span class="n">Cclist</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">Cclist</span><span class="p">)</span>
+                <span class="n">Cc</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">Cclist</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">Cclist</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">Cc</span> <span class="o">=</span> <span class="n">Cclist</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s2">&quot;unsupport type for Cclist&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">Cc</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">make_message</span><span class="p">(</span><span class="n">sender</span><span class="o">=</span><span class="n">sender</span><span class="p">,</span>
+                               <span class="n">targets</span><span class="o">=</span><span class="n">targets</span><span class="p">,</span>
+                               <span class="n">subject</span><span class="o">=</span><span class="n">subject</span><span class="p">,</span>
+                               <span class="n">content</span><span class="o">=</span><span class="n">content</span><span class="p">,</span>
+                               <span class="n">html</span><span class="o">=</span><span class="n">html</span><span class="p">,</span>
+                               <span class="n">Cc</span><span class="o">=</span><span class="n">Cc</span><span class="p">,</span>
+                               <span class="n">msgimgs</span><span class="o">=</span><span class="n">msgimgs</span><span class="p">,</span>
+                               <span class="n">attachments</span><span class="o">=</span><span class="n">attachments</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">smtp</span><span class="o">.</span><span class="n">send_message</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Sanic_Mail.send_email_no_wait"><a class="viewcode-back" href="../sanic_mail.html#sanic_mail.Sanic_Mail.send_email_no_wait">[docs]</a>    <span class="k">def</span> <span class="nf">send_email_no_wait</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                           <span class="n">targetlist</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">],</span>
+                           <span class="n">subject</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                           <span class="n">content</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                           <span class="n">sendername</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                           <span class="n">Cclist</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                           <span class="n">html</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                           <span class="n">msgimgs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                           <span class="n">attachments</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">asyncio</span><span class="o">.</span><span class="n">Task</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;执行发送email的动作但不等待而是继续执行下一步的操作.</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">            targetlist (Union[List[str], str]): - 接受者的信息列表,也可以是单独的一条信息</span>
+<span class="sd">            Cclist (Optional[List[str], str]): - 抄送者的信息列表,也可以是单独的一条信息</span>
+<span class="sd">            subject (str): - 邮件主题</span>
+<span class="sd">            content (str): - 邮件的文本内容</span>
+<span class="sd">            sendername (Optinal[str]): - 发送者的发送名,默认为None</span>
+<span class="sd">            html (bool): - 又见文本是否是html形式的富文本,默认为False</span>
+<span class="sd">            msgimgs (Optional[Dict[str, str]]): - html格式的文本中插入的图片</span>
+<span class="sd">            attachments (Optional[Dict[str, str]]): - 附件中的文件,默认为None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">task</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">ensure_future</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">send_email</span><span class="p">(</span>
+                <span class="n">targetlist</span><span class="o">=</span><span class="n">targetlist</span><span class="p">,</span>
+                <span class="n">subject</span><span class="o">=</span><span class="n">subject</span><span class="p">,</span>
+                <span class="n">content</span><span class="o">=</span><span class="n">content</span><span class="p">,</span>
+                <span class="n">sendername</span><span class="o">=</span><span class="n">sendername</span><span class="p">,</span>
+                <span class="n">Cclist</span><span class="o">=</span><span class="n">Cclist</span><span class="p">,</span>
+                <span class="n">html</span><span class="o">=</span><span class="n">html</span><span class="p">,</span>
+                <span class="n">msgimgs</span><span class="o">=</span><span class="n">msgimgs</span><span class="p">,</span>
+                <span class="n">attachments</span><span class="o">=</span><span class="n">attachments</span>
+            <span class="p">)</span>
+        <span class="p">)</span></div></div>
+        <span class="k">return</span> <span class="n">task</span>
+
+
+<span class="k">def</span> <span class="nf">format_addr</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span><span class="o">-&gt;</span><span class="nb">str</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;将地址信息格式化为`名字&lt;地址&gt;`的形式.&quot;&quot;&quot;</span>
+    <span class="n">name</span><span class="p">,</span> <span class="n">addr</span> <span class="o">=</span> <span class="n">parseaddr</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">formataddr</span><span class="p">((</span><span class="n">Header</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s1">&#39;utf-8&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span> <span class="n">addr</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">make_message</span><span class="p">(</span>
+        <span class="n">sender</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">targets</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">subject</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">content</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">html</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">Cc</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">msgimgs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">attachments</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span><span class="o">-&gt;</span> <span class="n">MIMEMultipart</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;创建信息.</span>
+
+<span class="sd">    创建信息通过html标志指定内容是html的富文本还是普通文本.默认为普通文本.</span>
+<span class="sd">    如果是html形式,可以用以下形式插入图片:</span>
+
+<span class="sd">    &lt;img src=&quot;cid:image1.jpg&quot;&gt;</span>
+
+<span class="sd">    使用`msgimgs`定义插入的图片,默认为None.以字典的形式传入,键为文本中对应的cid值,</span>
+<span class="sd">    此处要求是图片的带后缀名,值则是从图片中读出的字节序列.</span>
+
+<span class="sd">    与之类似的是pics和files,他们用于设置附件中的图片或者附件</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">        sender (str): - 发送者的信息</span>
+<span class="sd">        targets (str): - 接受者的信息</span>
+<span class="sd">        Cc (str): - 抄送者的信息</span>
+<span class="sd">        subject (str): - 邮件主题</span>
+<span class="sd">        content (str): - 邮件的文本内容</span>
+<span class="sd">        html (bool): - 又见文本是否是html形式的富文本,默认为False</span>
+<span class="sd">        msgimgs (Optional[Dict[str, str]]): - html格式的文本中插入的图片</span>
+<span class="sd">        attachments (Optional[Dict[str, str]]): - 附件中的文件,默认为None</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (MIMEMultipart): - 没有设置发送者和收件者的邮件内容对象</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="n">MIMEMultipart</span><span class="p">()</span>
+    <span class="n">msg</span><span class="p">[</span><span class="s1">&#39;Subject&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Header</span><span class="p">(</span><span class="n">subject</span><span class="p">,</span> <span class="s2">&quot;utf-8&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+    <span class="n">msg</span><span class="p">[</span><span class="s1">&#39;From&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">format_addr</span><span class="p">(</span><span class="n">sender</span><span class="p">)</span>
+    <span class="n">msg</span><span class="p">[</span><span class="s1">&#39;To&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">targets</span>
+    <span class="k">if</span> <span class="n">Cc</span><span class="p">:</span>
+        <span class="n">msg</span><span class="p">[</span><span class="s1">&#39;Cc&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">Cc</span>
+    <span class="k">if</span> <span class="n">html</span><span class="p">:</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">MIMEText</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="s1">&#39;html&#39;</span><span class="p">,</span> <span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+        <span class="n">msg</span><span class="o">.</span><span class="n">attach</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">msgimgs</span><span class="p">:</span>
+            <span class="n">asparagus_cid</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">msgimgs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">ctype</span><span class="p">,</span> <span class="n">encoding</span> <span class="o">=</span> <span class="n">mimetypes</span><span class="o">.</span><span class="n">guess_type</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                <span class="n">_maintype</span><span class="p">,</span> <span class="n">_subtype</span> <span class="o">=</span> <span class="n">ctype</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="c1">#asparagus_cid[i] = make_msgid()</span>
+                <span class="c1">#postfix = i.split(&quot;.&quot;)[-1]</span>
+                <span class="n">msgImage</span> <span class="o">=</span> <span class="n">MIMEImage</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">_subtype</span><span class="p">)</span>
+                <span class="c1">#msgImage.add_header(&#39;Content-Type&#39;, &#39;image/{}&#39;.format(postfix))</span>
+                <span class="n">msgImage</span><span class="o">.</span><span class="n">add_header</span><span class="p">(</span><span class="s1">&#39;Content-ID&#39;</span><span class="p">,</span> <span class="s1">&#39;&lt;</span><span class="si">{}</span><span class="s1">&gt;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]))</span>
+                <span class="n">msgImage</span><span class="o">.</span><span class="n">add_header</span><span class="p">(</span><span class="s1">&#39;Content-Disposition&#39;</span><span class="p">,</span> <span class="s1">&#39;inline&#39;</span><span class="p">)</span>
+                <span class="n">msg</span><span class="o">.</span><span class="n">attach</span><span class="p">(</span><span class="n">msgImage</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">MIMEText</span><span class="p">(</span><span class="n">content</span><span class="p">,</span> <span class="s1">&#39;plain&#39;</span><span class="p">)</span>
+        <span class="n">msg</span><span class="o">.</span><span class="n">attach</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">attachments</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">attachments</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">attachment</span> <span class="o">=</span> <span class="n">MIMEAttachment</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span>
+            <span class="n">attachment</span><span class="o">.</span><span class="n">add_header</span><span class="p">(</span><span class="s1">&#39;Content-Disposition&#39;</span><span class="p">,</span> <span class="s1">&#39;attachment&#39;</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">msg</span><span class="o">.</span><span class="n">attach</span><span class="p">(</span><span class="n">attachment</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">msg</span>
+
+
+<span class="k">class</span> <span class="nc">MIMEAttachment</span><span class="p">(</span><span class="n">MIMENonMultipart</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attachename</span><span class="p">,</span> <span class="n">_attachementdata</span><span class="p">,</span>
+                 <span class="n">_encoder</span><span class="o">=</span><span class="n">encoders</span><span class="o">.</span><span class="n">encode_base64</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">policy</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">_params</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ctype</span><span class="p">,</span> <span class="n">encoding</span> <span class="o">=</span> <span class="n">mimetypes</span><span class="o">.</span><span class="n">guess_type</span><span class="p">(</span><span class="n">attachename</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ctype</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">encoding</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">ctype</span> <span class="o">=</span> <span class="s1">&#39;application/octet-stream&#39;</span>
+        <span class="n">_maintype</span><span class="p">,</span> <span class="n">_subtype</span> <span class="o">=</span> <span class="n">ctype</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># if _subtype is None:</span>
+        <span class="c1">#     raise TypeError(&#39;Could not guess image MIME subtype&#39;)</span>
+        <span class="n">MIMENonMultipart</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_maintype</span><span class="p">,</span> <span class="n">_subtype</span><span class="p">,</span> <span class="n">policy</span><span class="o">=</span><span class="n">policy</span><span class="p">,</span>
+                                  <span class="o">**</span><span class="n">_params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_payload</span><span class="p">(</span><span class="n">_attachementdata</span><span class="p">)</span>
+        <span class="n">_encoder</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Sanic_Mail&quot;</span><span class="p">]</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, hsz.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

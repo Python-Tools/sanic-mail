@@ -8,6 +8,7 @@ from email.mime.multipart import MIMEMultipart
 from email import encoders
 from email.header import Header
 from email.utils import parseaddr, formataddr
+from email.utils import make_msgid
 from typing import (
     Union,
     Optional,
@@ -20,7 +21,13 @@ from sanic.log import logger
 
 
 class Sanic_Mail:
-    """邮件发送的主要部分."""
+    """sanic的邮件发送插件.
+    
+    使用后发送邮件会被绑定在`app对象`上,支持协程`send_email`,
+    也支持方法`send_email_nowait`,其中`send_email_nowait`意为将任务交给协程发送而不等待发送完毕,
+    会返回发送的task.
+
+    """
 
     @staticmethod
     def SetConfig(app, **confs):
@@ -223,34 +230,30 @@ def make_message(
         text = MIMEText(content, 'html', 'utf-8')
         msg.attach(text)
         if msgimgs:
+            asparagus_cid = {}
             for i, v in msgimgs.items():
-                postfix = i.split(".")[-1]
-                msgImage = MIMEImage(v)
-                msgImage.add_header('Content-Type', 'image/{}'.format(postfix))
-                msgImage.add_header('Content-ID', '<{}>'.format(i))
+                ctype, encoding = mimetypes.guess_type(i)
+                _maintype, _subtype = ctype.split('/', 1)
+                #asparagus_cid[i] = make_msgid()
+                #postfix = i.split(".")[-1]
+                msgImage = MIMEImage(v, _subtype)
+                #msgImage.add_header('Content-Type', 'image/{}'.format(postfix))
+                msgImage.add_header('Content-ID', '<{}>'.format(i.split(".")[0]))
                 msgImage.add_header('Content-Disposition', 'inline')
                 msg.attach(msgImage)
     else:
         text = MIMEText(content, 'plain')
         msg.attach(text)
-    ctype = 'application/octet-stream'
-    maintype, subtype = ctype.split('/', 1)
-
-
-    # if pics:
-    #     for name, pic in pics.items():
-    #         image = MIMEImage(pic, _subtype=subtype)
-    #         image.add_header('Content-Disposition', 'attachment', filename=name)
-    #         msg.attach(image)
     if attachments:
         for name, file in attachments.items():
-            attachment = MIMEAttachment(name,file)
+            attachment = MIMEAttachment(name, file)
             attachment.add_header('Content-Disposition', 'attachment', filename=name)
             msg.attach(attachment)
     return msg
 
+
 class MIMEAttachment(MIMENonMultipart):
-    def __init__(self,attachename,_attachementdata,
+    def __init__(self, attachename, _attachementdata,
                  _encoder=encoders.encode_base64, *, policy=None, **_params):
         """
         """
@@ -264,5 +267,6 @@ class MIMEAttachment(MIMENonMultipart):
                                   **_params)
         self.set_payload(_attachementdata)
         _encoder(self)
+
 
 __all__ = ["Sanic_Mail"]

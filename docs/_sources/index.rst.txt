@@ -55,7 +55,7 @@ But `SetConfig` has priority over `app.config`.
 Initialization
 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-As the same with other sanic's extensions, there are 2 way to initialization.
+As the same with other sanic's extensions, there are 2 ways to initialization.
 
 1. Use `Sanic_Mail(app)`
 2. Instantiate Sanic_Mail like `sm=Sanic_Mail()`,then use `sm.init_app(app)`
@@ -63,12 +63,12 @@ As the same with other sanic's extensions, there are 2 way to initialization.
 Send mails
 >>>>>>>>>>>>>>>>>>>
 
-there are 2 way to send email:
+there are 2 ways to send email:
 
 + coroutines `send_email`
 + method `send_email_nowait`
 
-`send_email_nowait` means run the task without waiting for the action complet ,
+`send_email_nowait` means run the task without waiting for the action completed,
 and this method will return the certain task instance
 
 these 2 method will also bind on the app instance,we can get app instance by `request.app`

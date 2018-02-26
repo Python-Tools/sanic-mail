@@ -71,7 +71,7 @@ But <cite>SetConfig</cite> has priority over <cite>app.config</cite>.</p>
 </div>
 <div class="section" id="initialization">
 <h3>Initialization<a class="headerlink" href="#initialization" title="Permalink to this headline">¶</a></h3>
-<p>As the same with other sanic’s extensions, there are 2 way to initialization.</p>
+<p>As the same with other sanic’s extensions, there are 2 ways to initialization.</p>
 <ol class="arabic simple">
 <li>Use <cite>Sanic_Mail(app)</cite></li>
 <li>Instantiate Sanic_Mail like <cite>sm=Sanic_Mail()</cite>,then use <cite>sm.init_app(app)</cite></li>
@@ -79,12 +79,12 @@ But <cite>SetConfig</cite> has priority over <cite>app.config</cite>.</p>
 </div>
 <div class="section" id="send-mails">
 <h3>Send mails<a class="headerlink" href="#send-mails" title="Permalink to this headline">¶</a></h3>
-<p>there are 2 way to send email:</p>
+<p>there are 2 ways to send email:</p>
 <ul class="simple">
 <li>coroutines <cite>send_email</cite></li>
 <li>method <cite>send_email_nowait</cite></li>
 </ul>
-<p><cite>send_email_nowait</cite> means run the task without waiting for the action complet ,
+<p><cite>send_email_nowait</cite> means run the task without waiting for the action completed,
 and this method will return the certain task instance</p>
 <p>these 2 method will also bind on the app instance,we can get app instance by <cite>request.app</cite></p>
 </div>

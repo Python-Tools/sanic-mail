@@ -20,14 +20,13 @@ CLASSIFIERS = [
     'Programming Language :: Python :: 3.6',
     'Topic :: Documentation :: Sphinx',
 ]
-KEYWORDS = ["email","sanic"]
-PACKAGES = ["sanic_mail"]
+KEYWORDS = ["email", "sanic"]
 ZIP_SAFE = False
 
 HERE = path.abspath(path.dirname(__file__))
 with open(path.join(HERE, 'README.rst'), encoding='utf-8') as f:
     LONG_DESCRIPTION = f.read()
-REQUIREMETS_DIR = path.join(HERE,"requirements")
+REQUIREMETS_DIR = path.join(HERE, "requirements")
 
 with open(path.join(REQUIREMETS_DIR, REQUIREMETS_FILE), encoding='utf-8') as f:
     REQUIREMETS = f.readlines()
@@ -49,7 +48,9 @@ setup(
     license=LICENSE,
     classifiers=CLASSIFIERS,
     keywords=KEYWORDS,
-    packages=PACKAGES,
+    py_modules=[
+        "sanic_mail"
+    ],
     include_package_data=True,
     install_requires=REQUIREMETS,
     extras_require={
@@ -58,6 +59,6 @@ setup(
     },
     zip_safe=ZIP_SAFE,
     data_files=[('requirements', ['requirements/requirements.txt',
-        'requirements/requirements_dev.txt',
-        'requirements/requirements_test.txt'])]
+                                  'requirements/requirements_dev.txt',
+                                  'requirements/requirements_test.txt'])]
 )

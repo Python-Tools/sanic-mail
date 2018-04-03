@@ -44,7 +44,7 @@ class Sanic_Mail:
         app.config.MAIL_SEND_PORT = (
             confs.get("MAIL_SEND_PORT") or app.config.MAIL_SEND_PORT
         )
-        app.config.MAIL_TLS = confs.get("MAIL_TLS") or app.config.MAIL_TLS or Ture
+        app.config.MAIL_TLS = confs.get("MAIL_TLS") or app.config.MAIL_TLS or True
         return app
 
     def __init__(self, app=None)->None:

@@ -1,6 +1,6 @@
 # sanic_mail
 
-+ version: 0.0.1
++ version: 0.0.2
 + status: dev
 + author: hsz
 + email: hsz1273327@gmail.com
@@ -59,9 +59,13 @@ Sanic_Mail.SetConfig(
 
 其中`send_email_nowait`意为将任务交给协程发送而不等待发送完毕,同时会返回发送的task.
 
-这个两个方法除了在`Sanic_Mail`实例上绑定外也会被绑定在`app对象`上
+这个两个方法除了在`Sanic_Mail`实例上绑定外也会被绑定在`app`对象上
 
-在蓝图中或者比较复杂的项目中,app对象可以通过`request.app`获取到
+在蓝图中或者比较复杂的项目中,app对象可以通过回掉函数的参数`request`上的`app`字段上获取到
+
+```python
+request.app.send_email(xxxx)
+```
 
 ### 使用时的注意点:
 

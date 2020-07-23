@@ -6,7 +6,7 @@ REQUIREMETS_DEV_FILE = 'requirements_dev.txt'
 REQUIREMETS_TEST_FILE = 'requirements_test.txt'
 REQUIREMETS_FILE = 'requirements.txt'
 PROJECTNAME = 'sanic-mail'
-VERSION = '0.0.2'
+VERSION = '0.0.3'
 DESCRIPTION = 'async email sender for sanic'
 URL = 'https://github.com/Sanic-Extensions/sanic-mail'
 AUTHOR = 'hsz'
@@ -16,8 +16,9 @@ CLASSIFIERS = [
     'Development Status :: 3 - Alpha',
     'Intended Audience :: Developers',
     'License :: OSI Approved :: MIT License',
-    'Programming Language :: Python :: 3.5',
     'Programming Language :: Python :: 3.6',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
     'Topic :: Documentation :: Sphinx',
 ]
 KEYWORDS = ["email", "sanic"]

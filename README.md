@@ -1,6 +1,6 @@
 # sanic_mail
 
-+ version: 0.0.2
++ version: 0.0.3
 + status: dev
 + author: hsz
 + email: hsz1273327@gmail.com
@@ -88,7 +88,7 @@ jinja = SanicJinja2(app)
 Sanic_Mail.SetConfig(
     app,
     MAIL_SENDER=<你的发送邮箱>,
-    MAIL_SENDER_PASSWORD=<你的妈妈>,
+    MAIL_SENDER_PASSWORD=<你的密码>,
     MAIL_SEND_HOST=<邮箱服务器地址>,
     MAIL_SEND_PORT=<端口>,
     MAIL_TLS=<是否使用TLS>
@@ -146,3 +146,11 @@ if __name__ == "__main__":
 ## Documentation
 
 Documentation on github page <https://github.com/Sanic-Extensions/sanic-mail>
+
+
+## ChangeLog
+
+### v0.0.3
+
++ 依赖项做了更新
++ 使用type hints做了类型标注

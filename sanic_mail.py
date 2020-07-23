@@ -1,4 +1,5 @@
 """Sanic-mail."""
+from __future__ import annotations
 import asyncio
 import mimetypes
 from email.mime.text import MIMEText
@@ -14,10 +15,12 @@ from typing import (
     Optional,
     Dict,
     List,
-    Any
+    Any,
+    NoReturn
 )
 import aiosmtplib
 from sanic.log import logger
+from sanic.app import Sanic
 
 
 class Sanic_Mail:
@@ -30,7 +33,7 @@ class Sanic_Mail:
     """
 
     @staticmethod
-    def SetConfig(app, **confs):
+    def SetConfig(app:Sanic, **confs:Union[str,bool,int]):
         """将设置绑定到app对象."""
         app.config.MAIL_SENDER = (
             confs.get("MAIL_SENDER") or app.config.MAIL_SENDER
@@ -47,7 +50,7 @@ class Sanic_Mail:
         app.config.MAIL_TLS = confs.get("MAIL_TLS") or app.config.MAIL_TLS or True
         return app
 
-    def __init__(self, app=None)->None:
+    def __init__(self, app:Optional[Sanic]=None)->None:
         """初始化插件,可以后指定app."""
         self.smtp = None
         if app:
@@ -55,7 +58,7 @@ class Sanic_Mail:
         else:
             pass
 
-    def init_app(self, app)->"Sanic_Mail":
+    def init_app(self, app:Sanic)->Sanic_Mail:
         """为app初始化插件."""
         self.app = app
         if "extensions" not in app.__dir__():
@@ -66,7 +69,7 @@ class Sanic_Mail:
         app.send_email = self.send_email
 
         @app.listener("before_server_start")
-        async def stmp_connection(app, loop):
+        async def stmp_connection(app:Sanic, loop:asyncio.AbstractEventLoop)->NoReturn:
             self.smtp = aiosmtplib.SMTP(
                 loop=loop,
                 hostname=app.config.MAIL_SEND_HOST,
@@ -80,7 +83,7 @@ class Sanic_Mail:
             logger.info("[SanicMail] smtp connected !")
 
         @app.listener("before_server_stop")
-        async def stmp_close(app, loop):
+        async def stmp_close(app:Sanic, loop:asyncio.AbstractEventLoop)->bool:
             self.smtp.close()
             self.smtp = None
             logger.info("[SanicMail] smtp connection closed !")

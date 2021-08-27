@@ -10,10 +10,10 @@ app = Sanic(__name__)
 jinja = SanicJinja2(app)
 Sanic_Mail.SetConfig(
     app,
-    MAIL_SENDER=,
-    MAIL_SENDER_PASSWORD=<你的密码>,
-    MAIL_SEND_HOST=<邮箱服务器地址>,
-    MAIL_SEND_PORT=<端口>,
+    MAIL_SENDER="ops@hszofficial.site",
+    MAIL_SENDER_PASSWORD="cZ4PyaDsFJU3UfeE",
+    MAIL_SEND_HOST="smtp.exmail.qq.com",
+    MAIL_SEND_PORT=456,
     MAIL_TLS=<是否使用TLS>
 )
 sender = Sanic_Mail(app)

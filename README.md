@@ -84,14 +84,13 @@ from sanic_mail import Sanic_Mail
 
 app = Sanic(__name__)
 jinja = SanicJinja2(app)
-Sanic_Mail.SetConfig(
-    app,
-    MAIL_SENDER=<你的发送邮箱>,
-    MAIL_SENDER_PASSWORD=<你的妈妈>,
-    MAIL_SEND_HOST=<邮箱服务器地址>,
-    MAIL_SEND_PORT=<端口>,
-    MAIL_TLS=<是否使用TLS>
-)
+app.config.update({
+    'MAIL_SENDER': < 你的发送邮箱 >,
+    'MAIL_SENDER_PASSWORD': < 你的密码 >,
+    'MAIL_SEND_HOST': < 邮箱服务器地址 >,
+    'MAIL_SEND_PORT': < 端口 >,
+    'MAIL_TLS': < 是否使用TLS >
+})
 sender = Sanic_Mail(app)
 
 
@@ -102,7 +101,7 @@ async def send(request):
         attachments["README.md"] = await f.read()
     async with aiofiles.open('source/猫.jpg', "rb") as f:
         attachments['猫.jpg'] = await f.read()
-    await app.send_email(
+    await sender.send_email(
         targetlist="hsz1273327@gmail.com",
         subject="测试发送",
         content="测试发送uu",
@@ -124,7 +123,7 @@ async def send_html(request):
     content = jinja.env.get_template('default.html').render(
         name='sanic!',pic1="猫"
     )
-    await app.send_email(
+    await sender.send_email(
         targetlist="hsz1273327@gmail.com",
         subject="测试发送",
         content=content,

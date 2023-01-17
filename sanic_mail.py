@@ -62,13 +62,13 @@ class Sanic_Mail:
             app.ctx.extensions = {}
         app.ctx.extensions['EmailSender'] = self
 
-        app.send_email_nowait = self.send_email_no_wait
-        app.send_email = self.send_email
+        app.ctx.send_email_nowait = self.send_email_no_wait
+        app.ctx.send_email = self.send_email
 
         @app.listener("before_server_start")
         async def stmp_connection(app, loop):
             self.smtp = aiosmtplib.SMTP(
-                loop=loop,
+                # loop=loop,
                 hostname=app.config.MAIL_SEND_HOST,
                 port=app.config.MAIL_SEND_PORT,
                 use_tls=app.config.MAIL_TLS

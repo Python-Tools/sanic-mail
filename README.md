@@ -101,7 +101,7 @@ async def send(request):
         attachments["README.md"] = await f.read()
     async with aiofiles.open('source/猫.jpg', "rb") as f:
         attachments['猫.jpg'] = await f.read()
-    await sender.send_email(
+    await app.ctx.send_email(
         targetlist="hsz1273327@gmail.com",
         subject="测试发送",
         content="测试发送uu",
@@ -123,7 +123,7 @@ async def send_html(request):
     content = jinja.env.get_template('default.html').render(
         name='sanic!',pic1="猫"
     )
-    await sender.send_email(
+    await app.ctx.send_email(
         targetlist="hsz1273327@gmail.com",
         subject="测试发送",
         content=content,

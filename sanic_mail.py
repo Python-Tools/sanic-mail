@@ -29,23 +29,23 @@ class Sanic_Mail:
 
     """
 
-    @staticmethod
-    def SetConfig(app, **confs):
-        """将设置绑定到app对象."""
-        app.config.MAIL_SENDER = (
-            confs.get("MAIL_SENDER") or app.config.MAIL_SENDER
-        )
-        app.config.MAIL_SENDER_PASSWORD = (
-            confs.get("MAIL_SENDER_PASSWORD") or app.config.MAIL_SENDER_PASSWORD
-        )
-        app.config.MAIL_SEND_HOST = (
-            confs.get("MAIL_SEND_HOST") or app.config.MAIL_SEND_HOST
-        )
-        app.config.MAIL_SEND_PORT = (
-            confs.get("MAIL_SEND_PORT") or app.config.MAIL_SEND_PORT
-        )
-        app.config.MAIL_TLS = confs.get("MAIL_TLS") or app.config.MAIL_TLS or True
-        return app
+    # @staticmethod
+    # def SetConfig(app, **confs):
+    #     """将设置绑定到app对象."""
+    #     app.config.MAIL_SENDER = (
+    #         confs.get("MAIL_SENDER") or app.config.MAIL_SENDER
+    #     )
+    #     app.config.MAIL_SENDER_PASSWORD = (
+    #         confs.get("MAIL_SENDER_PASSWORD") or app.config.MAIL_SENDER_PASSWORD
+    #     )
+    #     app.config.MAIL_SEND_HOST = (
+    #         confs.get("MAIL_SEND_HOST") or app.config.MAIL_SEND_HOST
+    #     )
+    #     app.config.MAIL_SEND_PORT = (
+    #         confs.get("MAIL_SEND_PORT") or app.config.MAIL_SEND_PORT
+    #     )
+    #     app.config.MAIL_TLS = confs.get("MAIL_TLS") or app.config.MAIL_TLS or True
+    #     return app
 
     def __init__(self, app=None)->None:
         """初始化插件,可以后指定app."""
@@ -59,16 +59,16 @@ class Sanic_Mail:
         """为app初始化插件."""
         self.app = app
         if "extensions" not in app.__dir__():
-            app.extensions = {}
-        app.extensions['EmailSender'] = self
+            app.ctx.extensions = {}
+        app.ctx.extensions['EmailSender'] = self
 
-        app.send_email_nowait = self.send_email_no_wait
-        app.send_email = self.send_email
+        app.ctx.send_email_nowait = self.send_email_no_wait
+        app.ctx.send_email = self.send_email
 
         @app.listener("before_server_start")
         async def stmp_connection(app, loop):
             self.smtp = aiosmtplib.SMTP(
-                loop=loop,
+                # loop=loop,
                 hostname=app.config.MAIL_SEND_HOST,
                 port=app.config.MAIL_SEND_PORT,
                 use_tls=app.config.MAIL_TLS

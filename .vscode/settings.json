@@ -1,4 +1,5 @@
 {
     "python.venvPath": "${workspaceFolder}/env",
-    "python.pythonPath": "C:\\Users\\hsz12\\Anaconda3\\python.exe"
+    "python.pythonPath": "C:\\Users\\hsz12\\Anaconda3\\python.exe",
+    "esbonio.sphinx.confDir": ""
 }

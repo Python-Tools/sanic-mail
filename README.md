@@ -26,21 +26,10 @@ app.config.update({
     'MAIL_SENDER_PASSWORD': < 你的密码 >,
     'MAIL_SEND_HOST': < 邮箱服务器地址 >,
     'MAIL_SEND_PORT': < 端口 >,
-    'MAIL_TLS': < 是否使用TLS >
+    'MAIL_TLS': < 是否使用TLS >,
+    'MAIL_START_TLS': < 是否启动TLS,注意与MAIL_TLS冲突 >
 })
 ```
-
-其中:
-
-+ MAIL_SEND_HOST 为邮件服务器地址
-+ MAIL_SEND_PORT 为邮件服务器端口
-+ MAIL_TLS 为邮件服务是否使用TLS
-+ MAIL_SENDER 为你的发件邮箱
-+ MAIL_SENDER_PASSWORD 为你的发件箱密码
-
-~~如果你的`app.config`对象中已经包含上述字段,那么也可以不用这个方法来设置,但优先级使用`SetConfig`高于配置文件中定义字段~~
-
-虽然有一个被注释的静态的方法，但是它有一个bug，还是建议使用`app.config`对象
 
 ### 插件初始化
 
@@ -58,15 +47,15 @@ app.config.update({
 
 其中`send_email_nowait`意为将任务交给协程发送而不等待发送完毕,同时会返回发送的task.
 
-这个两个方法除了在`Sanic_Mail`实例上绑定外也会被绑定在`app`对象上
+这个两个方法除了在`Sanic_Mail`实例上绑定外也会被绑定在`app.ctx`对象上
 
 在蓝图中或者比较复杂的项目中,app对象可以通过回掉函数的参数`request`上的`app`字段上获取到
 
 ```python
-request.app.send_email(xxxx)
+request.app.ctx.send_email(xxxx)
 ```
 
-### 使用时的注意点:
+### 使用时的注意点
 
 + html邮件中的图片
 
@@ -101,7 +90,7 @@ async def send(request):
         attachments["README.md"] = await f.read()
     async with aiofiles.open('source/猫.jpg', "rb") as f:
         attachments['猫.jpg'] = await f.read()
-    await app.ctx.send_email(
+    await request.app.ctx.send_email(
         targetlist="hsz1273327@gmail.com",
         subject="测试发送",
         content="测试发送uu",

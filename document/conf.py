@@ -27,9 +27,9 @@ project = 'sanic-mail'
 copyright = '2017, hsz'
 author = 'hsz'
 
-version = '0.0.2'
+version = '0.0.3'
 
-release = ''
+release= '0.0.3'
 
 language = 'en'
 

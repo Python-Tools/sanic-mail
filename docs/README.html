@@ -1,0 +1,235 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>}) &#8212; sanic-mail 0.0.3 documentation</title>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <p># sanic_mail</p>
+<ul class="simple">
+<li><p>version: 0.0.3</p></li>
+<li><p>status: dev</p></li>
+<li><p>author: hsz</p></li>
+<li><p>email: <a class="reference external" href="mailto:hsz1273327&#37;&#52;&#48;gmail&#46;com">hsz1273327<span>&#64;</span>gmail<span>&#46;</span>com</a></p></li>
+</ul>
+<p>## Description</p>
+<p>使用`async await`异步执行邮件发送的任务</p>
+<p>keywords:email,sanic</p>
+<p>## Feature</p>
+<ul class="simple">
+<li><p>异步发邮件</p></li>
+<li><p>支持html,html内嵌图片,附件</p></li>
+</ul>
+<p>## 使用方法</p>
+<p>### 设置</p>
+<p><a href="#id1"><span class="problematic" id="id2">``</span></a><a href="#id3"><span class="problematic" id="id4">`</span></a>python
+app.config.update({</p>
+<blockquote>
+<div><p>‘MAIL_SENDER’: &lt; 你的发送邮箱 &gt;,
+‘MAIL_SENDER_PASSWORD’: &lt; 你的密码 &gt;,
+‘MAIL_SEND_HOST’: &lt; 邮箱服务器地址 &gt;,
+‘MAIL_SEND_PORT’: &lt; 端口 &gt;,
+‘MAIL_TLS’: &lt; 是否使用TLS &gt;,
+‘MAIL_START_TLS’: &lt; 是否启动TLS,注意与MAIL_TLS冲突 &gt;</p>
+</div></blockquote>
+<div class="section" id="id5">
+<h1>})<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h1>
+<p>### 插件初始化</p>
+<p>和其他sanic插件一致有两种初始化方法:</p>
+<ol class="arabic simple">
+<li><p>使用`Sanic_Mail(app)`初始化.</p></li>
+<li><p>先实例化`sm=Sanic_Mail()`再初始化`sm.init_app(app)`</p></li>
+</ol>
+<p>### 发送</p>
+<p>发送邮件的方法有两个:</p>
+<ul class="simple">
+<li><p>协程`send_email`</p></li>
+<li><p>方法`send_email_nowait`</p></li>
+</ul>
+<p>其中`send_email_nowait`意为将任务交给协程发送而不等待发送完毕,同时会返回发送的task.</p>
+<p>这个两个方法除了在`Sanic_Mail`实例上绑定外也会被绑定在`app.ctx`对象上</p>
+<p>在蓝图中或者比较复杂的项目中,app对象可以通过回掉函数的参数`request`上的`app`字段上获取到</p>
+<p><code class="docutils literal notranslate"><span class="pre">`python</span>
+<span class="pre">request.app.ctx.send_email(xxxx)</span>
+<span class="pre">`</span></code></p>
+<p>### 使用时的注意点</p>
+<ul>
+<li><p>html邮件中的图片</p>
+<blockquote>
+<div><p>html邮件中可以插入图片,不过要求其中的cid为图片名去掉后缀的结果.</p>
+</div></blockquote>
+</li>
+</ul>
+<p>## Example</p>
+<p><a href="#id6"><span class="problematic" id="id7">``</span></a><a href="#id8"><span class="problematic" id="id9">`</span></a>python
+import aiofiles
+import base64
+from sanic import Sanic
+from sanic_jinja2 import SanicJinja2
+from sanic.response import json
+from sanic_mail import Sanic_Mail</p>
+<p>app = Sanic(__name__)
+jinja = SanicJinja2(app)
+app.config.update({</p>
+<blockquote>
+<div><p>‘MAIL_SENDER’: &lt; 你的发送邮箱 &gt;,
+‘MAIL_SENDER_PASSWORD’: &lt; 你的密码 &gt;,
+‘MAIL_SEND_HOST’: &lt; 邮箱服务器地址 &gt;,
+‘MAIL_SEND_PORT’: &lt; 端口 &gt;,
+‘MAIL_TLS’: &lt; 是否使用TLS &gt;</p>
+</div></blockquote>
+<p>})
+sender = Sanic_Mail(app)</p>
+<p>&#64;app.get(‘/send’)
+async def send(request):</p>
+<blockquote>
+<div><p>attachments = {}
+async with aiofiles.open(“source/README.md”, “rb”) as f:</p>
+<blockquote>
+<div><p>attachments[“README.md”] = await f.read()</p>
+</div></blockquote>
+<dl class="simple">
+<dt>async with aiofiles.open(‘source/猫.jpg’, “rb”) as f:</dt><dd><p>attachments[‘猫.jpg’] = await f.read()</p>
+</dd>
+<dt>await request.app.ctx.send_email(</dt><dd><p>targetlist=”<a class="reference external" href="mailto:hsz1273327&#37;&#52;&#48;gmail&#46;com">hsz1273327<span>&#64;</span>gmail<span>&#46;</span>com</a>”,
+subject=”测试发送”,
+content=”测试发送uu”,
+attachments=attachments</p>
+</dd>
+</dl>
+<p>)
+return json({“result”: “ok”})</p>
+</div></blockquote>
+<p>&#64;app.get(‘/send_html’)
+async def send_html(request):</p>
+<blockquote>
+<div><p>attachments = {}
+msgimgs = {}
+async with aiofiles.open(“source/README.md”, “rb”) as f:</p>
+<blockquote>
+<div><p>attachments[“README.md”] = await f.read()</p>
+</div></blockquote>
+<dl class="simple">
+<dt>async with aiofiles.open(‘source/猫.jpg’, “rb”) as f:</dt><dd><p>attachments[‘猫.jpg’] = await f.read()
+msgimgs[‘猫.jpg’] = attachments[‘猫.jpg’]</p>
+</dd>
+<dt>content = jinja.env.get_template(‘default.html’).render(</dt><dd><p>name=’sanic!’,pic1=”猫”</p>
+</dd>
+</dl>
+<p>)
+await app.ctx.send_email(</p>
+<blockquote>
+<div><p>targetlist=”<a class="reference external" href="mailto:hsz1273327&#37;&#52;&#48;gmail&#46;com">hsz1273327<span>&#64;</span>gmail<span>&#46;</span>com</a>”,
+subject=”测试发送”,
+content=content,
+html=True,
+msgimgs = msgimgs,
+attachments=attachments</p>
+</div></blockquote>
+<p>)
+return json({“result”: “ok”})</p>
+</div></blockquote>
+<dl class="simple">
+<dt>if __name__ == “__main__”:</dt><dd><p>app.run(host=’127.0.0.1’, port=5000, debug=True)</p>
+</dd>
+</dl>
+<hr class="docutils" />
+<p>## Install</p>
+<p><cite>python -m pip install sanic_mail</cite></p>
+<p>## Documentation</p>
+<p>Documentation on github page &lt;<a class="reference external" href="https://github.com/Sanic-Extensions/sanic-mail">https://github.com/Sanic-Extensions/sanic-mail</a>&gt;</p>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">sanic-mail</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="sanic_mail.html">sanic_mail package</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, hsz.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/README.md.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

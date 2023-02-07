@@ -133,11 +133,3 @@ if __name__ == "__main__":
 ## Documentation
 
 Documentation on github page <https://github.com/Sanic-Extensions/sanic-mail>
-
-
-## ChangeLog
-
-### v0.0.3
-
-+ 依赖项做了更新
-+ 使用type hints做了类型标注
